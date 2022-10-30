@@ -3,6 +3,7 @@ from datetime import datetime
 import json
 from contacts_resource import ContactsResource
 from flask_cors import CORS
+from response_service import Paginate
 import uuid
 
 # Create the Flask application object.
@@ -10,16 +11,20 @@ app = Flask(__name__)
 
 CORS(app)
 
+
 @app.route('/')
 def index():
     return '6156-Contact-microservice.'
 
+
 @app.route("/contacts/", methods=["GET"])
 def get_all_contacts():
     result = ContactsResource.fetch_all_contacts()
+    response = {}
+    Paginate.paginate(request.path, result, request.args, response)
 
-    if result:
-        rsp = Response(json.dumps(result), status=200, content_type="application.json")
+    if response['data']:
+        rsp = Response(json.dumps(response, default=str), status=200, content_type="application.json")
     else:
         rsp = Response("NOT FOUND", status=404, content_type="text/plain")
 
@@ -31,9 +36,11 @@ def get_contact_by_userid(userid):
 
     if request.method == 'GET':
         result = ContactsResource.get_by_userid(userid)
+        # response = {}
+        # Paginate.paginate(request.path, result, request.args, response)
 
         if result:
-            rsp = Response(json.dumps(result), status=200, content_type="application.json")
+            rsp = Response(json.dumps(result, default=str), status=200, content_type="application.json")
         else:
             rsp = Response("NOT FOUND", status=404, content_type="text/plain")
 
@@ -49,6 +56,7 @@ def get_contact_by_userid(userid):
         ContactsResource.delete_contact(userid)
         return redirect(url_for('get_all_contacts'))
 
+
 @app.route('/contacts/create/', methods=['GET', "POST"])
 def add_contact():
     if request.method == 'POST':
@@ -56,6 +64,7 @@ def add_contact():
         ContactsResource.create_contacts(uuid.uuid4(), contact_info)
         return redirect(url_for('get_all_contacts'))
     return render_template('contacts.html')
+
 
 def process_form(form):
     lastname = form.get('last_name')
