@@ -1,23 +1,34 @@
-from flask import Flask, Response, request, render_template, url_for, redirect
+from flask import Flask, Response, request, render_template, url_for, redirect, g
 from datetime import datetime
 import json
 from contacts_resource import ContactsResource
 from flask_cors import CORS
 from response_service import Paginate
 import uuid
+from flask_jwt_extended import JWTManager, get_jwt, verify_jwt_in_request, jwt_required
 
 # Create the Flask application object.
 app = Flask(__name__)
+app.secret_key = 'it-is-hard-to-guess'
+app.url_map.strict_slashes = False
 
 CORS(app)
+jwt = JWTManager(app)
 
+
+def check_user_login():    
+    print(request.headers)
+    verify_jwt_in_request()
+    g.user_id = get_jwt()['sub']
+    print(g.user_id)
 
 @app.route('/')
 def index():
     return '6156-Contact-microservice.'
 
 
-@app.route("/contacts/", methods=["GET"])
+
+@app.route("/contacts", methods=["GET"])
 def get_all_contacts():
     result = ContactsResource.fetch_all_contacts()
     response = {}
@@ -30,34 +41,35 @@ def get_all_contacts():
 
     return rsp
 
-
-@app.route("/contacts/users/<userid>/", methods=["GET", "PUT", "DELETE"])
-def get_contact_by_userid(userid):
-
+@app.route("/contacts/users/", methods=["GET", "PUT", "DELETE"])
+def get_contact_by_userid():
+    verify_jwt_in_request()
+    g.user_id = get_jwt()['sub']
+    userid = g.user_id
+    print(request.headers)
     if request.method == 'GET':
         result = ContactsResource.get_by_userid(userid)
-        # response = {}
-        # Paginate.paginate(request.path, result, request.args, response)
-
         if result:
             rsp = Response(json.dumps(result, default=str), status=200, content_type="application.json")
         else:
-            rsp = Response("NOT FOUND", status=404, content_type="text/plain")
+            ContactsResource.create_contacts(userid, ["update", "update", "update", "update", "update"])
+            result = ContactsResource.get_by_userid(userid)
+            rsp = Response(json.dumps(result, default=str), status=200, content_type="application.json")
 
         return rsp
 
     if request.method == 'PUT':
         updated_info = process_form(request.form)
         ContactsResource.update_contact(userid, updated_info)
-        # print('we are here')
-        return redirect(url_for('get_all_contacts', request_id=userid))
+
+        return {"msg": "Information updated"}, 200
 
     if request.method == 'DELETE':
         ContactsResource.delete_contact(userid)
-        return redirect(url_for('get_all_contacts'))
+        return {"msg": "Information deleted"}, 200
 
 
-@app.route('/contacts/create/', methods=['GET', "POST"])
+@app.route('/contacts/create', methods=['GET', "POST"])
 def add_contact():
     if request.method == 'POST':
         contact_info = process_form(request.form)
@@ -73,6 +85,7 @@ def process_form(form):
     phone = form.get('phone')
     email = form.get('email')
     info = [lastname, firstname, address, phone, email]
+    print(info)
     return info
 
 
