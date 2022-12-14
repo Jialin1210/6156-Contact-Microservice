@@ -4,6 +4,7 @@ import json
 from contacts_resource import ContactsResource
 from flask_cors import CORS
 from response_service import Paginate
+from smarty import Smarty
 import uuid
 from flask_jwt_extended import JWTManager, get_jwt, verify_jwt_in_request, jwt_required
 
