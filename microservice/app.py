@@ -1,4 +1,5 @@
 from flask import Flask, Response, request, render_template, url_for, redirect, g
+import requests
 from datetime import datetime
 import json
 from contacts_resource import ContactsResource
@@ -72,8 +73,36 @@ def get_contact_by_userid():
 
 @app.route('/contacts/create', methods=['GET', "POST"])
 def add_contact():
+    if request.method == "GET":
+        URL = "https://us-autocomplete-pro.api.smartystreets.com/lookup"
+        
+        auth_id = "4070fba4-036c-0f2d-aa09-b9ba9cceb8eb"
+        token = "XdzuVVnBsOovBpJSZej8"
+        search = request.form.get('address')
+        print('Smarty Search:', search)
+        if search:
+            # defining a params dict for the parameters to be sent to the API
+            PARAMS = {
+                'search':search,
+                'auth-id':auth_id,
+                'auth-token':token
+            }
+            
+            # sending get request and saving the response as response object
+            r = requests.get(url = URL, params = PARAMS)
+            
+            # extracting data in json format
+            data = r.json()
+            # print('Smarty Result: ', data)
+            return render_template('contacts.html', result=data)
+
     if request.method == 'POST':
-        contact_info = process_form(request.form)
+        lastname = request.form.get('last_name')
+        firstname = request.form.get('first_name')
+        address = request.form.get('address')
+        phone = request.form.get('phone')
+        email = request.form.get('email')
+        contact_info = [lastname, firstname, address, phone, email]
         ContactsResource.create_contacts(uuid.uuid4(), contact_info)
         return redirect(url_for('get_all_contacts'))
     return render_template('contacts.html')
@@ -86,7 +115,6 @@ def process_form(form):
     phone = form.get('phone')
     email = form.get('email')
     info = [lastname, firstname, address, phone, email]
-    print(info)
     return info
 
 
