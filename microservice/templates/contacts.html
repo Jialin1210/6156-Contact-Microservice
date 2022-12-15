@@ -40,7 +40,7 @@
                   // const url = `https://us-autocomplete-pro.api.smartystreets.com/lookup?${params.toString()}`;
                   
                   // google api
-                  const api_key = "AIzaSyCVc0q0-3jtaEc__0I8GORSt2339A4mRsw"
+                  const api_key = ""; //replace with api key
                   const url = "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=" + addr + "&types=geocode&key=" + api_key
                   // payload = {}
                   // headers = {}
@@ -53,7 +53,9 @@
                     headers: headers
                   })
                     .then((response) => response.json())
-                    .then((data) => console.log(data));
+                    .then((data) => {
+                        let arr = data.predictions;
+                        arr.forEach(elem => {console.log(elem.description)})});
                 }
                 window.addressAutocomplete = addressAutocomplete;
               </script>
