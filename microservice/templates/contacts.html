@@ -11,61 +11,143 @@
     
       <title>Contacts</title>
 </head>
+<style>
+  .active {
+    display: block;
+  }
+
+  .inactive {
+    display: none;
+  }
+
+  #suggestionContainer {
+    position: relative;
+  }
+
+  #suggestionBox {
+    position: relative;
+    border: solid 1px #000;
+    background-color: #fff;
+    height: 300px;
+    overflow-y: scroll;
+    cursor: pointer;
+  }
+
+  #suggestionBox div {
+    padding: 10px;
+  }
+
+  #suggestionBox div:hover {
+    background-color: #06c;
+    color: #fff;
+  }
+</style>
 <body>
-    <form action="{{ url_for("add_contact")}}" method="post">
-    <form action="{{ url_for("get_contact_by_userid", userid=userid)}}" method="put">
+  <div class="pt-5 text-center">
+    <h2>Update Your Profile</h2>
+  </div>
+  <form action="{{ url_for("add_contact")}}" method="post">
+  <form action="{{ url_for("get_contact_by_userid", userid=userid)}}" method="put">
+    <div class="row">
+      <div class="form-group col-md-8 offset-md-2">
+          <label for="first_name">First Name:</label>
+          <input type="text" id="first_name" name="first_name" class="form-control">
 
-        <div class="form-group">
-            <label for="first_name">First Name:</label>
-            <input type="text" id="first_name" name="first_name" class="form-control">
+          <label for="last_name">Last Name:</label>
+          <input type="text" id="last_name" name="last_name" class="form-control">
 
-            <label for="last_name">Last Name:</label>
-            <input type="text" id="last_name" name="last_name" class="form-control">
+          <label for="address">Address:</label>
+          <div>
+            <input type='text' id='address' value='' autocompelete='smartystreet' class="form-control"/>
+          </div>
+          <div>
+            <div id='suggestionBox' class='inactive'>
+          </div>
+          <!-- <input type="text" id="address" name="address" oninput="addressAutocomplete()" class="form-control"> -->
+          <script>
+            // import "./styles.css";
 
-            <label for="address">Address:</label>
-            <!-- <input type="text" id="address" name="address" class="form-control"> -->
-            <input type="text" id="address" name="address" oninput="addressAutocomplete()" class="form-control">
-    
-              <script>
-                function addressAutocomplete() {
-                  // addr = document.querySelector("address")
-                  var addr = document.getElementById('address').value;
-                
-                  // smarty
-                  // const params = new URLSearchParams();
-                  // params.append("auth-id",'4070fba4-036c-0f2d-aa09-b9ba9cceb8eb');
-                  // params.append('auth-token', 'XdzuVVnBsOovBpJSZej8');
-                  // params.append('key','146285194509558924');
-                  // params.append('search',addr)
-                  // const url = `https://us-autocomplete-pro.api.smartystreets.com/lookup?${params.toString()}`;
-                  
-                  // google api
-                  const api_key = "AIzaSyCVc0q0-3jtaEc__0I8GORSt2339A4mRsw"
-                  const url = "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=" + addr + "&types=geocode&key=" + api_key
-                  // payload = {}
-                  // headers = {}
-                  // response = requests.request("GET", url, headers=headers, data=payload)
-                  // print(response.text)
-                  let headers = new Headers();
-                  headers.append('Access-Control-Allow-Origin', 'http://localhost:5000');
+            const smartyKey = "146285196731897141";
+            // const api_key = "AIzaSyCVc0q0-3jtaEc__0I8GORSt2339A4mRsw"
+            const addressElement = document.getElementById("address");
+            const suggestionElement = document.getElementById("suggestionBox");
 
-                  fetch(url, {
-                    headers: headers
-                  })
-                    .then((response) => response.json())
-                    .then((data) => console.log(data));
-                }
-                window.addressAutocomplete = addressAutocomplete;
-              </script>
+            addressElement.addEventListener("keyup", (e) => {
+              const searchValue = e.target.value;
 
-            <label for="phone">Phone Number:</label>
-            <input type="text" id="phone" name="phone" class="form-control">
+              suggestionElement.innerHTML = "";
+              if (!searchValue) {
+                suggestionElement.classList.remove("active");
+                suggestionElement.classList.add("inactive");
+                return;
+              }
 
-            <label for="email">Email:</label>
-            <input type="text" id="email" name="email" class="form-control">
+              suggestionElement.classList.remove("inactive");
+              suggestionElement.classList.add("active");
 
-            <button type="submit" class="btn btn-primary">submit</button>
-        </div>
-    </form>
+              sendLookupRequest(searchValue);
+            });
+
+            const sendLookupRequest = async (searchValue) => {
+              const params = new URLSearchParams({
+                key: smartyKey,
+                search: searchValue,
+                source: "all"
+              });
+              // const params = new URLSearchParams({
+              //   input: searchValue,
+              //   types: "geocode",
+              //   key: api_key,
+              //   // source: "all"
+              // });
+              const request = await fetch(
+                `https://us-autocomplete-pro.api.smarty.com/lookup?${params}`
+              );
+              // const request = await fetch(
+              //   `https://maps.googleapis.com/maps/api/place/autocomplete/json?${params}`, {
+              //     mode: "no-cors"
+              //   }
+              // );
+              const data = await request.json();
+              // console.log(data);
+              if (data?.suggestions?.length > 0) formatSuggestions(data.suggestions);
+            };
+
+            const formatSuggestions = (suggestions) => {
+              const formattedSuggestions = suggestions.map((suggestion) => {
+                const divElement = document.createElement("div");
+                divElement.innerText = `${suggestion.street_line} ${suggestion.city} ${suggestion.state} ${suggestion.zipcode}`;
+
+                divElement.addEventListener("click", () => {
+                  suggestionElement.classList.remove("active");
+                  suggestionElement.classList.add("inactive");
+                  populateForm(suggestion);
+                });
+                return divElement;
+              });
+
+              suggestionElement.append(...formattedSuggestions);
+            };
+
+            const populateForm = (suggestion) => {
+              document.getElementById(
+                "address"
+              ).value = `${suggestion.street_line} ${suggestion.city} ${suggestion.state} ${suggestion.zipcode}`;
+            };
+
+
+          </script>
+
+          <label for="phone">Phone Number:</label>
+          <input type="text" id="phone" name="phone" class="form-control">
+
+          <label for="email">Email:</label>
+          <input type="text" id="email" name="email" class="form-control">
+          <br>
+          <button type="submit" class="btn btn-primary mr-3 ml-5">Submit</button>
+          
+      </div>
+    </div>
+  </form>
 </body>
 </html>
